@@ -1,0 +1,152 @@
+
+import React from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { ArrowLeft, ShoppingCart, Heart } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import { products } from '../data/products';
+import { useCart } from '../contexts/CartContext';
+import { toast } from '@/hooks/use-toast';
+
+const ProductDetail = () => {
+  const { id } = useParams();
+  const { addItem } = useCart();
+  const product = products.find(p => p.id === id);
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h1>
+          <Link to="/products">
+            <Button>Back to Products</Button>
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  const handleAddToCart = () => {
+    addItem(product);
+    toast({
+      title: "Added to cart",
+      description: `${product.name} has been added to your cart.`,
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-white">
+      <Navbar />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Back Button */}
+        <Link to="/products" className="inline-flex items-center text-gray-600 hover:text-gray-900 mb-8 transition-colors">
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Products
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+          {/* Product Image */}
+          <div className="animate-fade-in">
+            <img
+              src={product.image}
+              alt={product.name}
+              className="w-full aspect-square object-cover rounded-2xl shadow-lg"
+            />
+          </div>
+
+          {/* Product Information */}
+          <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <div className="mb-4">
+              <span className="text-sm text-gray-500 uppercase tracking-wide">
+                {product.category}
+              </span>
+            </div>
+            
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+              {product.name}
+            </h1>
+            
+            <p className="text-2xl font-bold text-gray-900 mb-6">
+              ${product.price.toFixed(2)}
+            </p>
+            
+            <p className="text-lg text-gray-600 mb-8 leading-relaxed">
+              {product.description}
+            </p>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
+              <Button
+                size="lg"
+                onClick={handleAddToCart}
+                className="flex-1 bg-gray-900 hover:bg-gray-800 text-white"
+              >
+                <ShoppingCart className="h-5 w-5 mr-2" />
+                Add to Cart
+              </Button>
+              <Button
+                size="lg"
+                variant="outline"
+                className="flex-1"
+              >
+                <Heart className="h-5 w-5 mr-2" />
+                Add to Wishlist
+              </Button>
+            </div>
+
+            {/* Product Details */}
+            <div className="space-y-6">
+              {product.ingredients && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingredients</h3>
+                    <ul className="list-disc list-inside text-gray-600 space-y-1">
+                      {product.ingredients.map((ingredient, index) => (
+                        <li key={index}>{ingredient}</li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {product.nutritionFacts && (
+                <Card>
+                  <CardContent className="p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-3">Nutrition Facts</h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium">Calories:</span>
+                        <span className="ml-2 text-gray-600">{product.nutritionFacts.calories}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Protein:</span>
+                        <span className="ml-2 text-gray-600">{product.nutritionFacts.protein}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Carbs:</span>
+                        <span className="ml-2 text-gray-600">{product.nutritionFacts.carbs}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium">Fat:</span>
+                        <span className="ml-2 text-gray-600">{product.nutritionFacts.fat}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <Footer />
+    </div>
+  );
+};
+
+export default ProductDetail;
