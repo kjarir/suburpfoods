@@ -1,3 +1,5 @@
+// This file is now deprecated as products are loaded from Supabase
+// Keeping for reference of the old data structure
 
 import { Product } from '../contexts/CartContext';
 
