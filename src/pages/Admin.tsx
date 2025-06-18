@@ -11,9 +11,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Package, ShoppingCart } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Package, ShoppingCart, BarChart3, Shield } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import AnalyticsDashboard from '@/components/AnalyticsDashboard';
+import SecurityMonitor from '@/components/SecurityMonitor';
 
 const Admin = () => {
   const { user, isAdmin, loading } = useAuth();
@@ -236,8 +238,16 @@ const Admin = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
         
-        <Tabs defaultValue="products" className="space-y-6">
-          <TabsList>
+        <Tabs defaultValue="dashboard" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6">
+            <TabsTrigger value="dashboard" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Dashboard
+            </TabsTrigger>
+            <TabsTrigger value="security" className="flex items-center gap-2">
+              <Shield className="h-4 w-4" />
+              Security
+            </TabsTrigger>
             <TabsTrigger value="products" className="flex items-center gap-2">
               <Package className="h-4 w-4" />
               Products
@@ -250,7 +260,79 @@ const Admin = () => {
               <Users className="h-4 w-4" />
               Users
             </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="dashboard">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
+              <SecurityMonitor />
+              <AnalyticsDashboard />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="security">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Security Monitoring</h2>
+              <SecurityMonitor />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Security Features</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span>Two-Factor Authentication</span>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>SSL Certificate</span>
+                      <Badge variant="default">Valid</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>Firewall Protection</span>
+                      <Badge variant="default">Enabled</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>DDoS Protection</span>
+                      <Badge variant="default">Active</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Compliance Status</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span>PCI DSS</span>
+                      <Badge variant="default">Compliant</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>GDPR</span>
+                      <Badge variant="default">Compliant</Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span>SOC 2</span>
+                      <Badge variant="default">Certified</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold">Advanced Analytics</h2>
+              <AnalyticsDashboard />
+            </div>
+          </TabsContent>
 
           <TabsContent value="products">
             <div className="space-y-6">

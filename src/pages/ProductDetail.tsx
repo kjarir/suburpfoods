@@ -6,14 +6,42 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { products } from '../data/products';
+import { useProducts } from '../hooks/useProducts';
 import { useCart } from '../contexts/CartContext';
 import { toast } from '@/hooks/use-toast';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { addItem } = useCart();
+  const { products, loading, error } = useProducts();
   const product = products.find(p => p.id === id);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <p className="text-xl text-gray-600">Loading product...</p>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-white">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+          <p className="text-xl text-red-600">Error loading product: {error}</p>
+          <Link to="/products">
+            <Button className="mt-4">Back to Products</Button>
+          </Link>
+        </div>
+        <Footer />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -101,7 +129,7 @@ const ProductDetail = () => {
 
             {/* Product Details */}
             <div className="space-y-6">
-              {product.ingredients && (
+              {product.ingredients && product.ingredients.length > 0 && (
                 <Card>
                   <CardContent className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-3">Ingredients</h3>
