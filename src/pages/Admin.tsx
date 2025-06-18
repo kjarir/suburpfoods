@@ -204,7 +204,7 @@ const Admin = () => {
   const updateOrderStatus = async (orderId: string, status: string) => {
     const { error } = await supabase
       .from('orders')
-      .update({ status })
+      .update({ status: status as 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' })
       .eq('id', orderId);
     
     if (error) {

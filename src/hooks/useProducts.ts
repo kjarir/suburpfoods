@@ -27,12 +27,12 @@ export const useProducts = () => {
       const transformedProducts: Product[] = data.map((product) => ({
         id: product.id,
         name: product.name,
-        price: parseFloat(product.price),
+        price: typeof product.price === 'string' ? parseFloat(product.price) : product.price,
         image: product.image,
         category: product.category,
         description: product.description,
         ingredients: product.ingredients,
-        nutritionFacts: product.nutrition_facts,
+        nutritionFacts: product.nutrition_facts as { calories: number; protein: string; carbs: string; fat: string; } | undefined,
       }));
 
       setProducts(transformedProducts);
