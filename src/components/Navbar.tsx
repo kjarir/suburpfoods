@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Heart, User, LogOut, Search, Menu, X, Package } from 'lucide-react';
+import { ShoppingCart, Heart, User, LogOut, Search, Menu, X, Package, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -21,7 +21,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
   const { items } = useCart();
   const { wishlistItems } = useWishlist();
   const navigate = useNavigate();
@@ -68,6 +68,12 @@ const Navbar = () => {
               <Link to="/faq" className="text-gray-700 hover:text-gray-900 transition-colors">
                 FAQ
               </Link>
+              {/* Admin link - only visible to admins */}
+              {isAdmin && (
+                <Link to="/admin" className="text-blue-600 hover:text-blue-800 transition-colors font-medium">
+                  Admin Panel
+                </Link>
+              )}
             </div>
 
             {/* Search Bar */}
@@ -130,6 +136,18 @@ const Navbar = () => {
                         Wishlist
                       </Link>
                     </DropdownMenuItem>
+                    {/* Admin Panel link in dropdown for mobile/compact view */}
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                          <Link to="/admin" className="flex items-center text-blue-600">
+                            <Settings className="h-4 w-4 mr-2" />
+                            Admin Panel
+                          </Link>
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleSignOut} className="flex items-center text-red-600">
                       <LogOut className="h-4 w-4 mr-2" />
@@ -214,6 +232,16 @@ const Navbar = () => {
                 >
                   FAQ
                 </Link>
+                {/* Admin Panel link in mobile navigation */}
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="block px-3 py-2 text-blue-600 hover:text-blue-800 transition-colors font-medium"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Admin Panel
+                  </Link>
+                )}
               </div>
             </div>
           )}
