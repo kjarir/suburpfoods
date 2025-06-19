@@ -5,6 +5,13 @@ import { useAuth } from './AuthContext';
 import { Product } from './CartContext';
 import { toast } from '@/hooks/use-toast';
 
+interface WishlistItem {
+  id: string;
+  user_id: string;
+  product_id: string;
+  created_at: string;
+}
+
 interface WishlistContextType {
   wishlistItems: Product[];
   addToWishlist: (product: Product) => void;
@@ -33,39 +40,48 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
     
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // First get wishlist items
+      const { data: wishlistData, error: wishlistError } = await supabase
         .from('wishlist')
-        .select(`
-          product_id,
-          products (
-            id,
-            name,
-            price,
-            image,
-            category,
-            description,
-            ingredients,
-            nutrition_facts
-          )
-        `)
+        .select('product_id')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (wishlistError) throw wishlistError;
 
-      const products = data?.map(item => ({
-        id: item.products.id,
-        name: item.products.name,
-        price: Number(item.products.price),
-        image: item.products.image || '',
-        category: item.products.category,
-        description: item.products.description || '',
-        ingredients: item.products.ingredients || [],
-        nutritionFacts: item.products.nutrition_facts as any
+      if (!wishlistData || wishlistData.length === 0) {
+        setWishlistItems([]);
+        setLoading(false);
+        return;
+      }
+
+      // Then get product details for those items
+      const productIds = wishlistData.map(item => item.product_id);
+      const { data: productsData, error: productsError } = await supabase
+        .from('products')
+        .select('*')
+        .in('id', productIds);
+
+      if (productsError) throw productsError;
+
+      const products = productsData?.map(product => ({
+        id: product.id,
+        name: product.name,
+        price: Number(product.price),
+        image: product.image || '',
+        category: product.category,
+        description: product.description || '',
+        ingredients: product.ingredients || [],
+        nutritionFacts: product.nutrition_facts as any
       })) || [];
 
       setWishlistItems(products);
     } catch (error: any) {
       console.error('Error fetching wishlist:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load wishlist items",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -89,7 +105,17 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
           product_id: product.id
         });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') { // Unique constraint violation
+          toast({
+            title: "Already in wishlist",
+            description: `${product.name} is already in your wishlist.`,
+            variant: "destructive"
+          });
+          return;
+        }
+        throw error;
+      }
 
       setWishlistItems(prev => [...prev, product]);
       toast({
@@ -97,9 +123,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         description: `${product.name} has been added to your wishlist.`
       });
     } catch (error: any) {
+      console.error('Error adding to wishlist:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to add item to wishlist",
         variant: "destructive"
       });
     }
@@ -123,9 +150,10 @@ export const WishlistProvider = ({ children }: { children: ReactNode }) => {
         description: "Item has been removed from your wishlist."
       });
     } catch (error: any) {
+      console.error('Error removing from wishlist:', error);
       toast({
         title: "Error",
-        description: error.message,
+        description: "Failed to remove item from wishlist",
         variant: "destructive"
       });
     }

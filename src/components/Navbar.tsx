@@ -1,36 +1,58 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogOut, Shield, Heart, Package } from 'lucide-react';
+import { ShoppingCart, Heart, User, LogOut, Search, Menu, X, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { useAuth } from '../contexts/AuthContext';
 import { useCart } from '../contexts/CartContext';
 import { useWishlist } from '../contexts/WishlistContext';
-import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const { itemCount } = useCart();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { user, signOut } = useAuth();
+  const { items } = useCart();
   const { wishlistItems } = useWishlist();
-  const { user, signOut, isAdmin, profile } = useAuth();
   const navigate = useNavigate();
+
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
   };
 
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
+
   return (
     <>
-      <nav className="bg-white shadow-lg sticky top-0 z-50">
+      <nav className="bg-white shadow-sm border-b sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <Link to="/" className="flex items-center space-x-2">
-              <span className="text-2xl font-bold text-gray-900">Subburpfood</span>
+              <div className="text-2xl font-bold text-gray-900">SubUrb</div>
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden lg:flex items-center space-x-8">
               <Link to="/" className="text-gray-700 hover:text-gray-900 transition-colors">
                 Home
               </Link>
@@ -46,195 +68,159 @@ const Navbar = () => {
               <Link to="/faq" className="text-gray-700 hover:text-gray-900 transition-colors">
                 FAQ
               </Link>
-              {user && (
-                <Link to="/orders" className="text-gray-700 hover:text-gray-900 transition-colors">
-                  My Orders
-                </Link>
-              )}
-              {isAdmin && (
-                <Link to="/admin" className="text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1">
-                  <Shield className="h-4 w-4" />
-                  Admin
-                </Link>
-              )}
             </div>
 
-            {/* User Actions */}
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <div className="hidden md:flex items-center space-x-4">
-                  <span className="text-sm text-gray-600">
-                    Welcome, {profile?.first_name || user.email}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSignOut}
-                    className="text-gray-700 hover:text-gray-900"
-                  >
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Sign Out
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAuthModal(true)}
-                  className="hidden md:flex text-gray-700 hover:text-gray-900"
-                >
-                  <User className="h-4 w-4 mr-2" />
-                  Sign In
-                </Button>
-              )}
+            {/* Search Bar */}
+            <div className="hidden md:block flex-1 max-w-md mx-8">
+              <form onSubmit={handleSearch} className="relative">
+                <Input
+                  type="text"
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10 pr-4"
+                />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              </form>
+            </div>
 
+            {/* Right side icons */}
+            <div className="flex items-center space-x-4">
               {/* Wishlist */}
-              {user && (
-                <Link to="/wishlist" className="relative">
-                  <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
-                    <Heart className="h-5 w-5" />
-                    {wishlistItems.length > 0 && (
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {wishlistItems.length}
-                      </span>
-                    )}
-                  </Button>
-                </Link>
-              )}
+              <Link to="/wishlist" className="relative p-2 text-gray-700 hover:text-gray-900 transition-colors">
+                <Heart className="h-6 w-6" />
+                {wishlistItems.length > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {wishlistItems.length}
+                  </Badge>
+                )}
+              </Link>
 
               {/* Cart */}
-              <Link to="/cart" className="relative">
-                <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
-                  <ShoppingCart className="h-5 w-5" />
-                  {itemCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-gray-900 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {itemCount}
-                    </span>
-                  )}
-                </Button>
+              <Link to="/cart" className="relative p-2 text-gray-700 hover:text-gray-900 transition-colors">
+                <ShoppingCart className="h-6 w-6" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {totalItems}
+                  </Badge>
+                )}
               </Link>
+
+              {/* User Menu */}
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                      <User className="h-5 w-5" />
+                      <span className="hidden md:inline">
+                        {user.user_metadata?.first_name || user.email?.split('@')[0]}
+                      </span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <Link to="/orders" className="flex items-center">
+                        <Package className="h-4 w-4 mr-2" />
+                        My Orders
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/wishlist" className="flex items-center">
+                        <Heart className="h-4 w-4 mr-2" />
+                        Wishlist
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleSignOut} className="flex items-center text-red-600">
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  onClick={() => setIsAuthModalOpen(true)}
+                  variant="ghost" 
+                  size="sm"
+                  className="flex items-center space-x-2"
+                >
+                  <User className="h-5 w-5" />
+                  <span className="hidden md:inline">Sign In</span>
+                </Button>
+              )}
 
               {/* Mobile menu button */}
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden"
+                className="lg:hidden"
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
               >
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+                {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
             </div>
           </div>
 
           {/* Mobile Navigation */}
           {isMenuOpen && (
-            <div className="md:hidden pb-4 border-t">
-              <div className="flex flex-col space-y-4 pt-4">
-                <Link 
-                  to="/" 
-                  className="text-gray-700 hover:text-gray-900 transition-colors"
+            <div className="lg:hidden">
+              <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 border-t">
+                {/* Mobile Search */}
+                <div className="md:hidden mb-4">
+                  <form onSubmit={handleSearch} className="relative">
+                    <Input
+                      type="text"
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-10 pr-4"
+                    />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  </form>
+                </div>
+
+                <Link
+                  to="/"
+                  className="block px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Home
                 </Link>
-                <Link 
-                  to="/products" 
-                  className="text-gray-700 hover:text-gray-900 transition-colors"
+                <Link
+                  to="/products"
+                  className="block px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Products
                 </Link>
-                <Link 
-                  to="/about" 
-                  className="text-gray-700 hover:text-gray-900 transition-colors"
+                <Link
+                  to="/about"
+                  className="block px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   About
                 </Link>
-                <Link 
-                  to="/contact" 
-                  className="text-gray-700 hover:text-gray-900 transition-colors"
+                <Link
+                  to="/contact"
+                  className="block px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   Contact
                 </Link>
-                <Link 
-                  to="/faq" 
-                  className="text-gray-700 hover:text-gray-900 transition-colors"
+                <Link
+                  to="/faq"
+                  className="block px-3 py-2 text-gray-700 hover:text-gray-900 transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   FAQ
                 </Link>
-                {user && (
-                  <Link 
-                    to="/orders" 
-                    className="text-gray-700 hover:text-gray-900 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    My Orders
-                  </Link>
-                )}
-                {user && (
-                  <Link 
-                    to="/wishlist" 
-                    className="text-gray-700 hover:text-gray-900 transition-colors"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Wishlist
-                  </Link>
-                )}
-                {isAdmin && (
-                  <Link 
-                    to="/admin" 
-                    className="text-gray-700 hover:text-gray-900 transition-colors flex items-center gap-1"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    <Shield className="h-4 w-4" />
-                    Admin
-                  </Link>
-                )}
-                
-                {user ? (
-                  <div className="border-t pt-4">
-                    <p className="text-sm text-gray-600 mb-2">
-                      Welcome, {profile?.first_name || user.email}
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        handleSignOut();
-                        setIsMenuOpen(false);
-                      }}
-                      className="text-gray-700 hover:text-gray-900 justify-start p-0"
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="border-t pt-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setShowAuthModal(true);
-                        setIsMenuOpen(false);
-                      }}
-                      className="text-gray-700 hover:text-gray-900 justify-start p-0"
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Sign In
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           )}
         </div>
       </nav>
 
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 };
