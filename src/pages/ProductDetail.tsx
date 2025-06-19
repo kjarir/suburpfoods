@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ShoppingCart, Heart } from 'lucide-react';
@@ -6,13 +5,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import RecommendationEngine from '../components/RecommendationEngine';
 import { useProducts } from '../hooks/useProducts';
 import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
 import { toast } from '@/hooks/use-toast';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const { addItem } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const { products, loading, error } = useProducts();
   const product = products.find(p => p.id === id);
 
@@ -64,6 +66,14 @@ const ProductDetail = () => {
       title: "Added to cart",
       description: `${product.name} has been added to your cart.`,
     });
+  };
+
+  const handleWishlistToggle = () => {
+    if (isInWishlist(product.id)) {
+      removeFromWishlist(product.id);
+    } else {
+      addToWishlist(product);
+    }
   };
 
   return (
@@ -119,11 +129,12 @@ const ProductDetail = () => {
               </Button>
               <Button
                 size="lg"
-                variant="outline"
+                variant={isInWishlist(product.id) ? "default" : "outline"}
+                onClick={handleWishlistToggle}
                 className="flex-1"
               >
-                <Heart className="h-5 w-5 mr-2" />
-                Add to Wishlist
+                <Heart className={`h-5 w-5 mr-2 ${isInWishlist(product.id) ? 'fill-current' : ''}`} />
+                {isInWishlist(product.id) ? 'Remove from Wishlist' : 'Add to Wishlist'}
               </Button>
             </div>
 
@@ -169,6 +180,14 @@ const ProductDetail = () => {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Recommendations */}
+        <div className="mt-16">
+          <RecommendationEngine 
+            currentProductId={product.id}
+            category={product.category}
+          />
         </div>
       </div>
 

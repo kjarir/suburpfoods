@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Menu, X, User, LogOut, Shield } from 'lucide-react';
+import { ShoppingCart, Menu, X, User, LogOut, Shield, Heart, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useCart } from '../contexts/CartContext';
+import { useWishlist } from '../contexts/WishlistContext';
 import { useAuth } from '../contexts/AuthContext';
 import AuthModal from './AuthModal';
 
@@ -11,6 +11,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const { itemCount } = useCart();
+  const { wishlistItems } = useWishlist();
   const { user, signOut, isAdmin, profile } = useAuth();
   const navigate = useNavigate();
 
@@ -46,8 +47,8 @@ const Navbar = () => {
                 FAQ
               </Link>
               {user && (
-                <Link to="/razorpay-test" className="text-gray-700 hover:text-gray-900 transition-colors">
-                  Payment Test
+                <Link to="/orders" className="text-gray-700 hover:text-gray-900 transition-colors">
+                  My Orders
                 </Link>
               )}
               {isAdmin && (
@@ -87,6 +88,21 @@ const Navbar = () => {
                 </Button>
               )}
 
+              {/* Wishlist */}
+              {user && (
+                <Link to="/wishlist" className="relative">
+                  <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
+                    <Heart className="h-5 w-5" />
+                    {wishlistItems.length > 0 && (
+                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {wishlistItems.length}
+                      </span>
+                    )}
+                  </Button>
+                </Link>
+              )}
+
+              {/* Cart */}
               <Link to="/cart" className="relative">
                 <Button variant="ghost" size="sm" className="text-gray-700 hover:text-gray-900">
                   <ShoppingCart className="h-5 w-5" />
@@ -151,11 +167,20 @@ const Navbar = () => {
                 </Link>
                 {user && (
                   <Link 
-                    to="/razorpay-test" 
+                    to="/orders" 
                     className="text-gray-700 hover:text-gray-900 transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Payment Test
+                    My Orders
+                  </Link>
+                )}
+                {user && (
+                  <Link 
+                    to="/wishlist" 
+                    className="text-gray-700 hover:text-gray-900 transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    Wishlist
                   </Link>
                 )}
                 {isAdmin && (

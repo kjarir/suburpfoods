@@ -44,13 +44,26 @@ const Checkout = () => {
       return;
     }
 
+    // Validate shipping information
+    const requiredFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode'];
+    const missingFields = requiredFields.filter(field => !shippingInfo[field as keyof typeof shippingInfo]);
+    
+    if (missingFields.length > 0) {
+      toast({
+        title: "Missing information",
+        description: "Please fill in all shipping details",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
-      // Create order in database
+      // Create order in database only after successful payment
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
           user_id: user.id,
-          total_amount: total,
+          total_amount: total * 1.1, // Including tax
           payment_id: paymentId,
           payment_status: 'completed',
           status: 'confirmed',
@@ -75,13 +88,16 @@ const Checkout = () => {
 
       if (itemsError) throw itemsError;
 
+      // Clear cart after successful order
       clearCart();
+      
       toast({
         title: "Order placed successfully!",
         description: `Your order #${order.id.slice(0, 8)} has been confirmed.`
       });
 
-      navigate('/');
+      // Redirect to order tracking
+      navigate(`/track-order/${order.id}`);
     } catch (error: any) {
       toast({
         title: "Order failed",
