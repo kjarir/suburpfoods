@@ -128,10 +128,8 @@ export const products: Product[] = [
 
 export const categories = [
   'All',
-  'Bakery',
-  'Pantry',
-  'Dairy & Eggs',
-  'Meat',
-  'Produce',
-  'Beverages'
+  'Samosas',
+  'Kebabs',
+  'Rolls',
+  
 ];

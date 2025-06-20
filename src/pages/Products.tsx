@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,7 +6,6 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
 import { useProducts } from '../hooks/useProducts';
-import { categories } from '../data/products';
 import { Search } from 'lucide-react';
 
 const Products = () => {
@@ -15,6 +13,12 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('name');
+
+  // Dynamically generate categories from actual products
+  const categories = useMemo(() => {
+    const uniqueCategories = [...new Set(products.map(product => product.category))];
+    return ['All', ...uniqueCategories.sort()];
+  }, [products]);
 
   const filteredProducts = products
     .filter(product => {

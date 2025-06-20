@@ -110,7 +110,7 @@ const ProductDetail = () => {
             </h1>
             
             <p className="text-2xl font-bold text-gray-900 mb-6">
-              ${product.price.toFixed(2)}
+            ₹{product.price.toFixed(2)}
             </p>
             
             <p className="text-lg text-gray-600 mb-8 leading-relaxed">

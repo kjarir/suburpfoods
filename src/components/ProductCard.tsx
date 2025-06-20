@@ -50,7 +50,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         </CardContent>
         <CardFooter className="p-4 pt-0 flex justify-between items-center">
           <span className="text-xl font-bold text-gray-900">
-            ${product.price.toFixed(2)}
+          ₹{product.price.toFixed(2)}
           </span>
           <Button
             size="sm"

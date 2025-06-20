@@ -44,18 +44,18 @@ const Index = () => {
             </div>
             <div className="relative animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <img
-                src="https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&h=600&fit=crop"
+                src="../public/heropage.png"
                 alt="Fresh vegetables and produce"
-                className="rounded-2xl shadow-2xl w-full"
+                className="rounded-2xl shadow-2xl h-full w-full"
               />
               <div className="absolute -bottom-6 -left-6 bg-white rounded-xl p-4 shadow-lg">
                 <div className="flex items-center space-x-3">
                   <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
                     <span className="text-green-600 font-bold">✓</span>
                   </div>
-                  <div>
+                  <div className="rounded-full">
                     <p className="font-semibold text-gray-900">100% Organic</p>
-                    <p className="text-gray-600 text-sm">Certified fresh</p>
+                    <p className="text-gray-600 text-sm">Preservative free</p>
                   </div>
                 </div>
               </div>
@@ -104,7 +104,7 @@ const Index = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Subburpfood?
+              Why Choose SuBurp Foods?
             </h2>
           </div>
           

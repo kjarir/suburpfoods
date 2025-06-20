@@ -47,8 +47,8 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="text-2xl font-bold text-gray-900">SubUrb</div>
+            <Link to="/" className="flex-1 items-center space-x-2">
+              <div className="text-2xl font-bold text-gray-900">SuBurp Foods</div>
             </Link>
 
             {/* Desktop Navigation */}
@@ -68,16 +68,16 @@ const Navbar = () => {
               <Link to="/faq" className="text-gray-700 hover:text-gray-900 transition-colors">
                 FAQ
               </Link>
-              {/* Admin link - only visible to admins */}
+              {/* Admin link - only visible to admins
               {isAdmin && (
                 <Link to="/admin" className="text-blue-600 hover:text-blue-800 transition-colors font-medium">
                   Admin Panel
                 </Link>
-              )}
+              )} */}
             </div>
 
             {/* Search Bar */}
-            <div className="hidden md:block flex-1 max-w-md mx-8">
+            <div className="hidden md:block flex-1 max-w-md mx-20">
               <form onSubmit={handleSearch} className="relative">
                 <Input
                   type="text"
