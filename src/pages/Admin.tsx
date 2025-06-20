@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Users, Package, ShoppingCart, BarChart3, Shield } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Package, ShoppingCart, BarChart3, Shield, RefreshCw } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import AnalyticsDashboard from '@/components/AnalyticsDashboard';
@@ -22,9 +21,16 @@ const Admin = () => {
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
   const [users, setUsers] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalProducts: 0,
+    totalOrders: 0,
+    totalUsers: 0,
+    totalRevenue: 0
+  });
   const [editingProduct, setEditingProduct] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
   const [loadingData, setLoadingData] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   
   const [productForm, setProductForm] = useState({
     name: '',
@@ -38,11 +44,104 @@ const Admin = () => {
 
   useEffect(() => {
     if (isAdmin) {
-      fetchProducts();
-      fetchOrders();
-      fetchUsers();
+      fetchAllData();
+      
+      // Set up real-time subscriptions for data updates
+      const ordersSubscription = supabase
+        .channel('orders-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+          fetchOrders();
+          fetchDashboardStats();
+        })
+        .subscribe();
+
+      const productsSubscription = supabase
+        .channel('products-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+          fetchProducts();
+          fetchDashboardStats();
+        })
+        .subscribe();
+
+      const usersSubscription = supabase
+        .channel('profiles-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          fetchUsers();
+          fetchDashboardStats();
+        })
+        .subscribe();
+
+      return () => {
+        ordersSubscription.unsubscribe();
+        productsSubscription.unsubscribe();
+        usersSubscription.unsubscribe();
+      };
     }
   }, [isAdmin]);
+
+  const fetchAllData = async () => {
+    await Promise.all([
+      fetchProducts(),
+      fetchOrders(),
+      fetchUsers(),
+      fetchDashboardStats()
+    ]);
+  };
+
+  const fetchDashboardStats = async () => {
+    try {
+      // Fetch completed orders for revenue calculation
+      const { data: completedOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('total_amount')
+        .eq('payment_status', 'completed');
+
+      if (ordersError) throw ordersError;
+
+      // Fetch all orders count
+      const { count: totalOrdersCount, error: orderCountError } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true });
+
+      if (orderCountError) throw orderCountError;
+
+      // Fetch products count
+      const { count: totalProductsCount, error: productCountError } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true });
+
+      if (productCountError) throw productCountError;
+
+      // Fetch users count
+      const { count: totalUsersCount, error: userCountError } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      if (userCountError) throw userCountError;
+
+      const totalRevenue = completedOrders?.reduce((sum, order) => sum + parseFloat(order.total_amount), 0) || 0;
+
+      setDashboardStats({
+        totalProducts: totalProductsCount || 0,
+        totalOrders: totalOrdersCount || 0,
+        totalUsers: totalUsersCount || 0,
+        totalRevenue
+      });
+
+    } catch (error) {
+      console.error('Error fetching dashboard stats:', error);
+    }
+  };
+
+  const refreshAllData = async () => {
+    setRefreshing(true);
+    await fetchAllData();
+    setRefreshing(false);
+    toast({
+      title: "Data refreshed",
+      description: "All data has been updated with the latest information",
+    });
+  };
 
   const fetchProducts = async () => {
     try {
@@ -198,6 +297,7 @@ const Admin = () => {
             title: "Product updated successfully",
           });
           fetchProducts();
+          fetchDashboardStats();
           setEditingProduct(null);
           setShowProductForm(false);
           resetProductForm();
@@ -219,6 +319,7 @@ const Admin = () => {
             title: "Product created successfully",
           });
           fetchProducts();
+          fetchDashboardStats();
           setShowProductForm(false);
           resetProductForm();
         }
@@ -279,6 +380,7 @@ const Admin = () => {
             title: "Product deleted successfully",
           });
           fetchProducts();
+          fetchDashboardStats();
         }
       } catch (err) {
         console.error('Unexpected error:', err);
@@ -310,6 +412,7 @@ const Admin = () => {
           title: "Order status updated successfully",
         });
         fetchOrders();
+        fetchDashboardStats();
       }
     } catch (err) {
       console.error('Unexpected error:', err);
@@ -343,12 +446,23 @@ const Admin = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          {loadingData && (
-            <div className="flex items-center text-sm text-gray-600">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
-              Loading data...
-            </div>
-          )}
+          <div className="flex items-center gap-4">
+            {loadingData && (
+              <div className="flex items-center text-sm text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Loading data...
+              </div>
+            )}
+            <Button 
+              onClick={refreshAllData} 
+              disabled={refreshing}
+              variant="outline"
+              size="sm"
+            >
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+              Refresh Data
+            </Button>
+          </div>
         </div>
         
         <Tabs defaultValue="dashboard" className="space-y-6">
@@ -381,14 +495,15 @@ const Admin = () => {
 
           <TabsContent value="dashboard">
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <h2 className="text-2xl font-semibold">Real-time Dashboard Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <Card>
                   <CardHeader>
                     <CardTitle>Total Products</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{products.length}</div>
+                    <div className="text-3xl font-bold">{dashboardStats.totalProducts}</div>
+                    <p className="text-sm text-gray-600">Active products in store</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -396,7 +511,8 @@ const Admin = () => {
                     <CardTitle>Total Orders</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{orders.length}</div>
+                    <div className="text-3xl font-bold">{dashboardStats.totalOrders}</div>
+                    <p className="text-sm text-gray-600">All-time orders</p>
                   </CardContent>
                 </Card>
                 <Card>
@@ -404,7 +520,17 @@ const Admin = () => {
                     <CardTitle>Total Users</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="text-3xl font-bold">{users.length}</div>
+                    <div className="text-3xl font-bold">{dashboardStats.totalUsers}</div>
+                    <p className="text-sm text-gray-600">Registered customers</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Revenue</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">${dashboardStats.totalRevenue.toFixed(2)}</div>
+                    <p className="text-sm text-gray-600">From completed orders</p>
                   </CardContent>
                 </Card>
               </div>
@@ -467,7 +593,7 @@ const Admin = () => {
 
           <TabsContent value="analytics">
             <div className="space-y-6">
-              <h2 className="text-2xl font-semibold">Advanced Analytics</h2>
+              <h2 className="text-2xl font-semibold">Real-time Analytics</h2>
               <AnalyticsDashboard />
             </div>
           </TabsContent>
@@ -661,6 +787,11 @@ const Admin = () => {
                             <p className="text-xs text-gray-500">
                               Created: {new Date(order.created_at).toLocaleDateString()}
                             </p>
+                            <div className="mt-2">
+                              <Badge variant={order.payment_status === 'completed' ? 'default' : 'secondary'}>
+                                Payment: {order.payment_status}
+                              </Badge>
+                            </div>
                           </div>
                           <div className="flex flex-col gap-2">
                             <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
