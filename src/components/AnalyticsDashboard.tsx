@@ -33,13 +33,33 @@ const AnalyticsDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchAnalyticsData();
+    
+    // Set up real-time subscriptions
+    const ordersSubscription = supabase
+      .channel('analytics-orders')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        fetchAnalyticsData();
+      })
+      .subscribe();
+
+    const productsSubscription = supabase
+      .channel('analytics-products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchAnalyticsData();
+      })
+      .subscribe();
+
+    return () => {
+      ordersSubscription.unsubscribe();
+      productsSubscription.unsubscribe();
+    };
   }, []);
 
   const fetchAnalyticsData = async () => {
     try {
       setLoading(true);
       
-      // Fetch total revenue and orders
+      // Fetch completed orders with proper type handling
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('total_amount, created_at, status')
@@ -47,29 +67,36 @@ const AnalyticsDashboard: React.FC = () => {
 
       if (ordersError) throw ordersError;
 
-      // Fetch total users
-      const { data: users, error: usersError } = await supabase
+      // Fetch all users count
+      const { count: usersCount, error: usersError } = await supabase
         .from('profiles')
-        .select('id, created_at');
+        .select('*', { count: 'exact', head: true });
 
       if (usersError) throw usersError;
 
       // Fetch products with categories
       const { data: products, error: productsError } = await supabase
         .from('products')
-        .select('category, price');
+        .select('category, price, is_active')
+        .eq('is_active', true);
 
       if (productsError) throw productsError;
 
-      // Calculate total revenue
-      const totalRevenue = orders?.reduce((sum, order) => sum + parseFloat(order.total_amount), 0) || 0;
-      const totalOrders = orders?.length || 0;
-      const activeUsers = users?.length || 0;
+      // Calculate real metrics from database
+      const totalRevenue = orders?.reduce((sum, order) => {
+        const amount = typeof order.total_amount === 'string' 
+          ? parseFloat(order.total_amount) 
+          : Number(order.total_amount);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0) || 0;
 
-      // Generate monthly data from actual orders
+      const totalOrders = orders?.length || 0;
+      const activeUsers = usersCount || 0;
+
+      // Generate monthly data from real orders
       const monthlyData = generateMonthlyData(orders || []);
       
-      // Generate category distribution from actual products
+      // Generate category distribution from real products
       const categoryData = generateCategoryData(products || []);
 
       setAnalytics({
@@ -99,13 +126,16 @@ const AnalyticsDashboard: React.FC = () => {
       monthlyStats[monthKey] = { sales: 0, revenue: 0 };
     }
 
-    // Populate with actual data
+    // Populate with actual order data
     orders.forEach(order => {
       const orderDate = new Date(order.created_at);
       const monthKey = monthNames[orderDate.getMonth()];
       if (monthlyStats[monthKey]) {
+        const amount = typeof order.total_amount === 'string' 
+          ? parseFloat(order.total_amount) 
+          : Number(order.total_amount);
         monthlyStats[monthKey].sales += 1;
-        monthlyStats[monthKey].revenue += parseFloat(order.total_amount);
+        monthlyStats[monthKey].revenue += isNaN(amount) ? 0 : amount;
       }
     });
 

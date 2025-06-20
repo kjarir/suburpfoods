@@ -90,7 +90,7 @@ const Admin = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch completed orders for revenue calculation
+      // Fetch completed orders for revenue calculation with proper type handling
       const { data: completedOrders, error: ordersError } = await supabase
         .from('orders')
         .select('total_amount')
@@ -119,7 +119,13 @@ const Admin = () => {
 
       if (userCountError) throw userCountError;
 
-      const totalRevenue = completedOrders?.reduce((sum, order) => sum + parseFloat(order.total_amount), 0) || 0;
+      // Calculate total revenue with proper type conversion
+      const totalRevenue = completedOrders?.reduce((sum, order) => {
+        const amount = typeof order.total_amount === 'string' 
+          ? parseFloat(order.total_amount) 
+          : Number(order.total_amount);
+        return sum + (isNaN(amount) ? 0 : amount);
+      }, 0) || 0;
 
       setDashboardStats({
         totalProducts: totalProductsCount || 0,
