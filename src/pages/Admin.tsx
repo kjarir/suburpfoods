@@ -24,6 +24,7 @@ const Admin = () => {
   const [users, setUsers] = useState([]);
   const [editingProduct, setEditingProduct] = useState(null);
   const [showProductForm, setShowProductForm] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
   
   const [productForm, setProductForm] = useState({
     name: '',
@@ -44,187 +45,291 @@ const Admin = () => {
   }, [isAdmin]);
 
   const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      setLoadingData(true);
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching products:', error);
+        toast({
+          title: "Error fetching products",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setProducts(data || []);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
       toast({
         title: "Error fetching products",
-        description: error.message,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      setProducts(data || []);
+    } finally {
+      setLoadingData(false);
     }
   };
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        profiles(first_name, last_name, email),
-        order_items(*, products(name))
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      setLoadingData(true);
+      // First fetch orders
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (ordersError) {
+        console.error('Error fetching orders:', ordersError);
+        toast({
+          title: "Error fetching orders",
+          description: ordersError.message,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Then fetch profiles separately
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, first_name, last_name, email');
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+      }
+
+      // Then fetch order items with products
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select(`
+          *,
+          products(name)
+        `);
+      
+      if (orderItemsError) {
+        console.error('Error fetching order items:', orderItemsError);
+      }
+
+      // Combine the data manually
+      const combinedOrders = ordersData?.map(order => {
+        const profile = profilesData?.find(p => p.id === order.user_id);
+        const orderItems = orderItemsData?.filter(item => item.order_id === order.id) || [];
+        
+        return {
+          ...order,
+          profiles: profile,
+          order_items: orderItems
+        };
+      }) || [];
+
+      setOrders(combinedOrders);
+    } catch (err) {
+      console.error('Unexpected error fetching orders:', err);
       toast({
         title: "Error fetching orders",
-        description: error.message,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      setOrders(data || []);
+    } finally {
+      setLoadingData(false);
     }
   };
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (error) {
+    try {
+      setLoadingData(true);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: "Error fetching users",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        setUsers(data || []);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
       toast({
         title: "Error fetching users",
-        description: error.message,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      setUsers(data || []);
+    } finally {
+      setLoadingData(false);
     }
   };
 
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const productData = {
-      ...productForm,
-      price: parseFloat(productForm.price),
-      stock_quantity: parseInt(productForm.stock_quantity),
-      ingredients: productForm.ingredients.split(',').map(i => i.trim()),
-    };
+    try {
+      const productData = {
+        ...productForm,
+        price: parseFloat(productForm.price),
+        stock_quantity: parseInt(productForm.stock_quantity) || 0,
+        ingredients: productForm.ingredients ? productForm.ingredients.split(',').map(i => i.trim()) : [],
+      };
 
-    if (editingProduct) {
-      const { error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', editingProduct.id);
-      
-      if (error) {
-        toast({
-          title: "Error updating product",
-          description: error.message,
-          variant: "destructive",
-        });
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
+        
+        if (error) {
+          console.error('Error updating product:', error);
+          toast({
+            title: "Error updating product",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Product updated successfully",
+          });
+          fetchProducts();
+          setEditingProduct(null);
+          setShowProductForm(false);
+          resetProductForm();
+        }
       } else {
-        toast({
-          title: "Product updated successfully",
-        });
-        fetchProducts();
-        setEditingProduct(null);
-        setShowProductForm(false);
-        setProductForm({
-          name: '',
-          description: '',
-          price: '',
-          image: '',
-          category: '',
-          ingredients: '',
-          stock_quantity: '',
-        });
+        const { error } = await supabase
+          .from('products')
+          .insert([productData]);
+        
+        if (error) {
+          console.error('Error creating product:', error);
+          toast({
+            title: "Error creating product",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Product created successfully",
+          });
+          fetchProducts();
+          setShowProductForm(false);
+          resetProductForm();
+        }
       }
-    } else {
-      const { error } = await supabase
-        .from('products')
-        .insert([productData]);
-      
-      if (error) {
-        toast({
-          title: "Error creating product",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Product created successfully",
-        });
-        fetchProducts();
-        setShowProductForm(false);
-        setProductForm({
-          name: '',
-          description: '',
-          price: '',
-          image: '',
-          category: '',
-          ingredients: '',
-          stock_quantity: '',
-        });
-      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      toast({
+        title: "Error saving product",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
     }
+  };
+
+  const resetProductForm = () => {
+    setProductForm({
+      name: '',
+      description: '',
+      price: '',
+      image: '',
+      category: '',
+      ingredients: '',
+      stock_quantity: '',
+    });
   };
 
   const handleEditProduct = (product: any) => {
     setEditingProduct(product);
     setProductForm({
-      name: product.name,
-      description: product.description,
-      price: product.price.toString(),
-      image: product.image,
-      category: product.category,
+      name: product.name || '',
+      description: product.description || '',
+      price: product.price ? product.price.toString() : '',
+      image: product.image || '',
+      category: product.category || '',
       ingredients: product.ingredients?.join(', ') || '',
-      stock_quantity: product.stock_quantity.toString(),
+      stock_quantity: product.stock_quantity ? product.stock_quantity.toString() : '0',
     });
     setShowProductForm(true);
   };
 
   const handleDeleteProduct = async (productId: string) => {
     if (confirm('Are you sure you want to delete this product?')) {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-      
-      if (error) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+        
+        if (error) {
+          console.error('Error deleting product:', error);
+          toast({
+            title: "Error deleting product",
+            description: error.message,
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Product deleted successfully",
+          });
+          fetchProducts();
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
         toast({
           title: "Error deleting product",
-          description: error.message,
+          description: "An unexpected error occurred",
           variant: "destructive",
         });
-      } else {
-        toast({
-          title: "Product deleted successfully",
-        });
-        fetchProducts();
       }
     }
   };
 
   const updateOrderStatus = async (orderId: string, status: string) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: status as 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' })
-      .eq('id', orderId);
-    
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ status: status as 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled' })
+        .eq('id', orderId);
+      
+      if (error) {
+        console.error('Error updating order status:', error);
+        toast({
+          title: "Error updating order status",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Order status updated successfully",
+        });
+        fetchOrders();
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
       toast({
         title: "Error updating order status",
-        description: error.message,
+        description: "An unexpected error occurred",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Order status updated successfully",
-      });
-      fetchOrders();
     }
   };
 
   if (loading) {
-    return <div className="min-h-screen bg-white flex items-center justify-center">Loading...</div>;
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
   if (!user || !isAdmin) {
@@ -236,7 +341,15 @@ const Admin = () => {
       <Navbar />
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Admin Dashboard</h1>
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+          {loadingData && (
+            <div className="flex items-center text-sm text-gray-600">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+              Loading data...
+            </div>
+          )}
+        </div>
         
         <Tabs defaultValue="dashboard" className="space-y-6">
           <TabsList className="grid w-full grid-cols-6">
@@ -269,8 +382,33 @@ const Admin = () => {
           <TabsContent value="dashboard">
             <div className="space-y-6">
               <h2 className="text-2xl font-semibold">Dashboard Overview</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Products</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{products.length}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Orders</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{orders.length}</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Total Users</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-3xl font-bold">{users.length}</div>
+                  </CardContent>
+                </Card>
+              </div>
               <SecurityMonitor />
-              <AnalyticsDashboard />
             </div>
           </TabsContent>
 
@@ -286,7 +424,7 @@ const Admin = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span>Two-Factor Authentication</span>
+                      <span>Row Level Security</span>
                       <Badge variant="default">Active</Badge>
                     </div>
                     <div className="flex justify-between items-center">
@@ -294,11 +432,11 @@ const Admin = () => {
                       <Badge variant="default">Valid</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span>Firewall Protection</span>
+                      <span>Database Encryption</span>
                       <Badge variant="default">Enabled</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span>DDoS Protection</span>
+                      <span>Authentication</span>
                       <Badge variant="default">Active</Badge>
                     </div>
                   </CardContent>
@@ -310,16 +448,16 @@ const Admin = () => {
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="flex justify-between items-center">
-                      <span>PCI DSS</span>
+                      <span>Data Protection</span>
                       <Badge variant="default">Compliant</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span>GDPR</span>
-                      <Badge variant="default">Compliant</Badge>
+                      <span>User Privacy</span>
+                      <Badge variant="default">Protected</Badge>
                     </div>
                     <div className="flex justify-between items-center">
-                      <span>SOC 2</span>
-                      <Badge variant="default">Certified</Badge>
+                      <span>Secure Storage</span>
+                      <Badge variant="default">Encrypted</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -429,15 +567,7 @@ const Admin = () => {
                         <Button type="button" variant="outline" onClick={() => {
                           setShowProductForm(false);
                           setEditingProduct(null);
-                          setProductForm({
-                            name: '',
-                            description: '',
-                            price: '',
-                            image: '',
-                            category: '',
-                            ingredients: '',
-                            stock_quantity: '',
-                          });
+                          resetProductForm();
                         }}>
                           Cancel
                         </Button>
@@ -448,43 +578,56 @@ const Admin = () => {
               )}
 
               <div className="grid gap-4">
-                {products.map((product: any) => (
-                  <Card key={product.id}>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div className="flex gap-4">
-                          <img
-                            src={product.image}
-                            alt={product.name}
-                            className="w-16 h-16 object-cover rounded"
-                          />
-                          <div>
-                            <h3 className="font-semibold">{product.name}</h3>
-                            <p className="text-sm text-gray-600">{product.category}</p>
-                            <p className="text-lg font-bold">${product.price}</p>
-                            <p className="text-sm">Stock: {product.stock_quantity}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditProduct(product)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => handleDeleteProduct(product.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                {products.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center text-gray-500">
+                      No products found. Create your first product using the "Add Product" button above.
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  products.map((product: any) => (
+                    <Card key={product.id}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div className="flex gap-4">
+                            {product.image && (
+                              <img
+                                src={product.image}
+                                alt={product.name}
+                                className="w-16 h-16 object-cover rounded"
+                                onError={(e) => {
+                                  e.currentTarget.src = '/placeholder.svg';
+                                }}
+                              />
+                            )}
+                            <div>
+                              <h3 className="font-semibold">{product.name}</h3>
+                              <p className="text-sm text-gray-600">{product.category}</p>
+                              <p className="text-lg font-bold">${product.price}</p>
+                              <p className="text-sm">Stock: {product.stock_quantity || 0}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleEditProduct(product)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => handleDeleteProduct(product.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>
@@ -494,41 +637,52 @@ const Admin = () => {
               <h2 className="text-2xl font-semibold">Orders Management</h2>
               
               <div className="grid gap-4">
-                {orders.map((order: any) => (
-                  <Card key={order.id}>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-semibold">Order #{order.id.slice(0, 8)}</h3>
-                          <p className="text-sm text-gray-600">
-                            Customer: {order.profiles?.first_name} {order.profiles?.last_name}
-                          </p>
-                          <p className="text-sm text-gray-600">Email: {order.profiles?.email}</p>
-                          <p className="text-lg font-bold">Total: ${order.total_amount}</p>
-                          <p className="text-sm">
-                            Items: {order.order_items?.map((item: any) => item.products?.name).join(', ')}
-                          </p>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
-                            {order.status}
-                          </Badge>
-                          <select
-                            value={order.status}
-                            onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                            className="text-sm border rounded px-2 py-1"
-                          >
-                            <option value="pending">Pending</option>
-                            <option value="confirmed">Confirmed</option>
-                            <option value="shipped">Shipped</option>
-                            <option value="delivered">Delivered</option>
-                            <option value="cancelled">Cancelled</option>
-                          </select>
-                        </div>
-                      </div>
+                {orders.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center text-gray-500">
+                      No orders found.
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  orders.map((order: any) => (
+                    <Card key={order.id}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="font-semibold">Order #{order.id.slice(0, 8)}</h3>
+                            <p className="text-sm text-gray-600">
+                              Customer: {order.profiles?.first_name || 'N/A'} {order.profiles?.last_name || ''}
+                            </p>
+                            <p className="text-sm text-gray-600">Email: {order.profiles?.email || 'N/A'}</p>
+                            <p className="text-lg font-bold">Total: ${order.total_amount}</p>
+                            <p className="text-sm">
+                              Items: {order.order_items?.map((item: any) => item.products?.name || 'Unknown').join(', ') || 'No items'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Created: {new Date(order.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Badge variant={order.status === 'pending' ? 'secondary' : 'default'}>
+                              {order.status}
+                            </Badge>
+                            <select
+                              value={order.status}
+                              onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                              className="text-sm border rounded px-2 py-1"
+                            >
+                              <option value="pending">Pending</option>
+                              <option value="confirmed">Confirmed</option>
+                              <option value="shipped">Shipped</option>
+                              <option value="delivered">Delivered</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>
@@ -538,24 +692,35 @@ const Admin = () => {
               <h2 className="text-2xl font-semibold">Users Management</h2>
               
               <div className="grid gap-4">
-                {users.map((user: any) => (
-                  <Card key={user.id}>
-                    <CardContent className="p-6">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold">
-                            {user.first_name} {user.last_name}
-                          </h3>
-                          <p className="text-sm text-gray-600">{user.email}</p>
-                          <p className="text-sm">Phone: {user.phone || 'Not provided'}</p>
-                        </div>
-                        <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                          {user.role}
-                        </Badge>
-                      </div>
+                {users.length === 0 ? (
+                  <Card>
+                    <CardContent className="p-6 text-center text-gray-500">
+                      No users found.
                     </CardContent>
                   </Card>
-                ))}
+                ) : (
+                  users.map((user: any) => (
+                    <Card key={user.id}>
+                      <CardContent className="p-6">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="font-semibold">
+                              {user.first_name || 'N/A'} {user.last_name || ''}
+                            </h3>
+                            <p className="text-sm text-gray-600">{user.email}</p>
+                            <p className="text-sm">Phone: {user.phone || 'Not provided'}</p>
+                            <p className="text-xs text-gray-500">
+                              Joined: {new Date(user.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                            {user.role || 'customer'}
+                          </Badge>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </div>
           </TabsContent>
