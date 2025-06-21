@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import ProductCard from '../components/ProductCard';
-import { products } from '../data/products';
+import { useProducts } from '../hooks/useProducts';
 
 const Index = () => {
+  const { products, loading } = useProducts();
   const featuredProducts = products.slice(0, 4);
 
   return (
@@ -44,7 +45,7 @@ const Index = () => {
             </div>
             <div className="relative animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <img
-                src="../public/heropage.png"
+                src="https://res.cloudinary.com/dzkfhdhs0/image/upload/v1750514391/heropage_hjel4f.png"
                 alt="Fresh vegetables and produce"
                 className="rounded-2xl shadow-2xl h-full w-full"
               />
@@ -76,17 +77,23 @@ const Index = () => {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-            {featuredProducts.map((product, index) => (
-              <div 
-                key={product.id} 
-                className="animate-fade-in" 
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                <ProductCard product={product} />
-              </div>
-            ))}
-          </div>
+          {loading ? (
+            <div className="text-center py-12">
+              <p className="text-xl text-gray-600">Loading featured products...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+              {featuredProducts.map((product, index) => (
+                <div 
+                  key={product.id} 
+                  className="animate-fade-in" 
+                  style={{ animationDelay: `${index * 0.1}s` }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="text-center mt-12">
             <Link to="/products">

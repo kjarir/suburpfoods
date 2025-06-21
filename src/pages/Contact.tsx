@@ -72,9 +72,9 @@ const Contact = () => {
                   <div>
                     <h3 className="font-semibold text-gray-900">Address</h3>
                     <p className="text-gray-600">
-                      123 Food Street<br />
-                      Freshtown, FT 12345<br />
-                      United States
+                      1803, Aafiya Heights, <br />
+                      Dimtimkar road, New Nagpada<br />
+                      Mumbai, Maharashtra, India
                     </p>
                   </div>
                 </div>
@@ -83,7 +83,7 @@ const Contact = () => {
                   <Phone className="h-6 w-6 text-gray-400 mt-1" />
                   <div>
                     <h3 className="font-semibold text-gray-900">Phone</h3>
-                    <p className="text-gray-600">(555) 123-4567</p>
+                    <p className="text-gray-600">(+91) 8655669963</p>
                   </div>
                 </div>
                 
@@ -91,7 +91,7 @@ const Contact = () => {
                   <Mail className="h-6 w-6 text-gray-400 mt-1" />
                   <div>
                     <h3 className="font-semibold text-gray-900">Email</h3>
-                    <p className="text-gray-600">hello@subburpfood.com</p>
+                    <p className="text-gray-600">hello@suburpfoods.com</p>
                   </div>
                 </div>
                 

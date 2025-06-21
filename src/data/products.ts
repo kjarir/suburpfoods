@@ -6,9 +6,9 @@ import { Product } from '../contexts/CartContext';
 export const products: Product[] = [
   {
     id: '1',
-    name: 'Artisan Sourdough Bread',
+    name: 'Chicken Ishq Mein Cheese',
     price: 8.99,
-    image: 'https://images.unsplash.com/photo-1549931319-a545dcf3bc73?w=500&h=500&fit=crop',
+    image: 'https://res.cloudinary.com/dzkfhdhs0/image/upload/v1750332274/ChatGPT_Image_Jun_19_2025_04_54_24_PM_qmtar6.png',
     category: 'Bakery',
     description: 'Handcrafted sourdough bread made with organic flour and aged starter. Perfect for breakfast or as a side for any meal.',
     ingredients: ['Organic flour', 'Water', 'Sourdough starter', 'Sea salt'],

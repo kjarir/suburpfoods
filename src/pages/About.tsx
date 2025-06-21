@@ -12,11 +12,10 @@ const About = () => {
         {/* Hero Section */}
         <div className="text-center mb-16 animate-fade-in">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-            About Subburpfood
+            About SuBurpFoods
           </h1>
           <p className="text-xl text-gray-600 leading-relaxed">
-            We're passionate about bringing you the finest quality food products 
-            sourced directly from local farms and artisan producers.
+          At SuburpFood, we’re proud to serve you the finest quality food products made with love in our own kitchens, using ingredients sourced from trusted local farms and expert artisans — because great taste starts at home.
           </p>
         </div>
 
@@ -32,14 +31,10 @@ const About = () => {
           <div className="animate-fade-in" style={{ animationDelay: '0.2s' }}>
             <h2 className="text-3xl font-bold text-gray-900 mb-6">Our Story</h2>
             <p className="text-gray-600 mb-6 leading-relaxed">
-              Founded in 2020, Subburpfood was born from a simple belief: everyone deserves 
-              access to fresh, high-quality food that supports local communities and 
-              sustainable farming practices.
+            Founded in 2017, SuburpFood began with a simple mission — to bring the warmth of homemade flavors to every plate. What started as a small kitchen idea quickly grew into a trusted homegrown brand, committed to delivering ready-to-cook delights made from high-quality ingredients, sourced responsibly from local farms and crafted to celebrate real, honest food.
             </p>
             <p className="text-gray-600 leading-relaxed">
-              What started as a small weekend farmers market stall has grown into a 
-              comprehensive online marketplace connecting food lovers with the best 
-              local producers in the region.
+            What began as a humble weekend kitchen experiment quickly evolved into SuburpFood — a full-fledged homegrown brand and online destination, connecting food lovers with flavorful, ready-to-cook meals made from locally sourced ingredients and crafted with care in our own kitchens.
             </p>
           </div>
         </div>
@@ -88,26 +83,26 @@ const About = () => {
           <h2 className="text-3xl font-bold text-gray-900 text-center mb-12 animate-fade-in">
             Meet Our Team
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
             <div className="text-center animate-fade-in">
               <img
-                src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=300&fit=crop&crop=face"
-                alt="John Smith"
+                src="https://res.cloudinary.com/dzkfhdhs0/image/upload/v1750514391/heropage_hjel4f.png"
+                alt="Raabia Ahmed"
                 className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
               />
-              <h3 className="text-xl font-semibold text-gray-900">John Smith</h3>
-              <p className="text-gray-600">Founder & CEO</p>
+              <h3 className="text-xl font-semibold text-gray-900">Raabia Ahmed</h3>
+              <p className="text-gray-600">Founder & Chef</p>
             </div>
             <div className="text-center animate-fade-in" style={{ animationDelay: '0.1s' }}>
               <img
-                src="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=300&h=300&fit=crop&crop=face"
-                alt="Sarah Johnson"
+                src="https://res.cloudinary.com/dzkfhdhs0/image/upload/v1750514391/heropage_hjel4f.png"
+                alt="Iqbal Ahmed"
                 className="w-32 h-32 rounded-full mx-auto mb-4 object-cover"
               />
-              <h3 className="text-xl font-semibold text-gray-900">Sarah Johnson</h3>
-              <p className="text-gray-600">Head of Operations</p>
+              <h3 className="text-xl font-semibold text-gray-900">Iqbal Ahmed</h3>
+              <p className="text-gray-600">Founder</p>
             </div>
-            <div className="text-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            {/* <div className="text-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
               <img
                 src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&h=300&fit=crop&crop=face"
                 alt="Mike Davis"
@@ -115,7 +110,7 @@ const About = () => {
               />
               <h3 className="text-xl font-semibold text-gray-900">Mike Davis</h3>
               <p className="text-gray-600">Quality Assurance</p>
-            </div>
+            </div> */}
           </div>
         </div>
 
