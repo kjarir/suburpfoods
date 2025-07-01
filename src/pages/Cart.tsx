@@ -48,7 +48,7 @@ const Cart = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
                     <img
-                      src={item.image || '/placeholder.svg'}
+                      src={item.image && item.image.trim() !== '' ? item.image : '/placeholder.svg'}
                       alt={item.name}
                       className="w-16 h-16 object-cover rounded"
                       onError={(e) => {

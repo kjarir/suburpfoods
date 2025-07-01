@@ -69,7 +69,7 @@ const Wishlist = () => {
               <CardContent className="p-4">
                 <div className="relative mb-4">
                   <img
-                    src={item.image || '/placeholder.svg'}
+                    src={item.image && item.image.trim() !== '' ? item.image : '/placeholder.svg'}
                     alt={item.name}
                     className="w-16 h-16 object-cover rounded"
                     onError={(e) => {

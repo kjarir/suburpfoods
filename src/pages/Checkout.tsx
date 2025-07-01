@@ -181,9 +181,18 @@ const Checkout = () => {
       }
 
       // Step 3: Update order with Razorpay order ID
-      await supabase.from('orders')
+      console.log('📝 Updating order with razorpay_order_id:', razorpayOrder.id);
+      
+      const { error: updateError } = await supabase.from('orders')
         .update({ razorpay_order_id: razorpayOrder.id })
         .eq('id', order.id);
+        
+      if (updateError) {
+        console.error('❌ Failed to update order with razorpay_order_id:', updateError);
+        throw updateError;
+      }
+      
+      console.log('✅ Order updated with razorpay_order_id successfully');
 
       // Step 4: Initialize Razorpay payment
       const rzp = new window.Razorpay({
@@ -210,13 +219,17 @@ const Checkout = () => {
             console.log('Payment successful:', response);
             
             // Step 5: Verify payment with Supabase Edge Function
+            const verifyPayload = {
+              razorpay_order_id: razorpayOrder.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              order_id: order.id,
+            };
+            
+            console.log('🔍 Sending verification payload:', verifyPayload);
+            
             const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
-              body: {
-                razorpay_order_id: razorpayOrder.id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                order_id: order.id,
-              },
+              body: verifyPayload,
               headers: {
                 Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
               },
@@ -421,7 +434,7 @@ const Checkout = () => {
                     <div key={item.id} className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <img
-                          src={item.image || '/placeholder.svg'}
+                          src={item.image && item.image.trim() !== '' ? item.image : '/placeholder.svg'}
                           alt={item.name}
                           className="w-12 h-12 object-cover rounded"
                           onError={(e) => {

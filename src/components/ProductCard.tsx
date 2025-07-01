@@ -30,7 +30,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <CardContent className="p-0">
           <div className="aspect-square overflow-hidden rounded-t-lg">
             <img
-              src={product.image || '/placeholder.svg'}
+              src={product.image && product.image.trim() !== '' ? product.image : '/placeholder.svg'}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={(e) => {

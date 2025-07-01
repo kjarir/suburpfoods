@@ -91,7 +91,7 @@ const ProductDetail = () => {
           {/* Product Image */}
           <div className="animate-fade-in">
             <img
-              src={product.image || '/placeholder.svg'}
+              src={product.image && product.image.trim() !== '' ? product.image : '/placeholder.svg'}
               alt={product.name}
               className="w-full h-full object-cover rounded-lg"
               onError={(e) => {

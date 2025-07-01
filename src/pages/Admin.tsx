@@ -723,7 +723,7 @@ const Admin = () => {
                         <div className="flex justify-between items-start">
                           <div className="flex gap-4">
                             <img
-                              src={product.image || '/placeholder.svg'}
+                              src={product.image && product.image.trim() !== '' ? product.image : '/placeholder.svg'}
                               alt={product.name}
                               className="w-16 h-16 object-cover rounded"
                               onError={(e) => {
