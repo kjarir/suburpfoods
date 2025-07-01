@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
@@ -70,9 +69,12 @@ const Wishlist = () => {
               <CardContent className="p-4">
                 <div className="relative mb-4">
                   <img
-                    src={item.image}
+                    src={item.image || '/placeholder.svg'}
                     alt={item.name}
-                    className="w-full h-48 object-cover rounded-lg"
+                    className="w-16 h-16 object-cover rounded"
+                    onError={(e) => {
+                      e.currentTarget.src = '/placeholder.svg';
+                    }}
                   />
                   <Button
                     variant="ghost"

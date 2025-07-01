@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -30,17 +29,22 @@ serve(async (req) => {
 
     const { amount, currency = 'INR', receipt } = await req.json();
 
-    // Get Razorpay credentials from secrets
-    const keyId = Deno.env.get('RAZORPAY_KEY_ID');
-    const keySecret = Deno.env.get('RAZORPAY_KEY_SECRET');
+    // Use hardcoded LIVE Razorpay credentials
+    const keyId = 'rzp_live_G8umJgAzBel5Vj'; // Your live key ID
+    const keySecret = 'LBdExscUN9pRrwuXaX1hpKKC'; // Your actual live secret key
 
     if (!keyId || !keySecret) {
-      throw new Error('Razorpay credentials not configured');
+      throw new Error('Razorpay LIVE credentials not configured');
+    }
+
+    // Ensure we're using live keys (should start with rzp_live_)
+    if (!keyId.startsWith('rzp_live_')) {
+      throw new Error('Please configure LIVE Razorpay keys for production payments');
     }
 
     // Create Razorpay order
     const orderData = {
-      amount: amount * 100, // Convert to paise
+      amount: amount, // Amount is already in paise from frontend
       currency,
       receipt,
     };
@@ -66,7 +70,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         ...order,
-        key_id: keyId, // Include key_id for frontend
+        key_id: keyId, // Include live key_id for frontend
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -75,6 +79,7 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    console.error('Create order error:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       {
@@ -83,4 +88,4 @@ serve(async (req) => {
       }
     );
   }
-});
+}); 

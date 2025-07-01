@@ -1,5 +1,6 @@
+'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,16 +9,22 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import EnhancedPayment from '../components/EnhancedPayment';
 import { useCart } from '../contexts/CartContext';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, total, clearCart } = useCart();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(false);
   const [shippingInfo, setShippingInfo] = useState({
     firstName: '',
     lastName: '',
@@ -30,11 +37,19 @@ const Checkout = () => {
     country: 'India'
   });
 
+  // Load Razorpay script dynamically
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.async = true;
+    document.body.appendChild(script);
+  }, []);
+
   const handleInputChange = (field: string, value: string) => {
     setShippingInfo(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePaymentSuccess = async (paymentId: string) => {
+  const handlePayment = async () => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -57,22 +72,41 @@ const Checkout = () => {
       return;
     }
 
+    if (items.length === 0) {
+      toast({
+        title: "Empty cart",
+        description: "Please add items to your cart before checkout",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
-      // Create order in database only after successful payment
+      // Step 1: Create order in database with pending status
+      const orderData = {
+        user_id: user.id,
+        total_amount: total * 1.1, // Including tax
+        status: 'pending' as const,
+        payment_status: 'pending' as const,
+        shipping_address: shippingInfo
+      };
+
+      console.log('📝 Creating order in database:', orderData);
+
       const { data: order, error: orderError } = await supabase
         .from('orders')
-        .insert({
-          user_id: user.id,
-          total_amount: total * 1.1, // Including tax
-          payment_id: paymentId,
-          payment_status: 'completed',
-          status: 'confirmed',
-          shipping_address: shippingInfo
-        })
+        .insert([orderData])
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) {
+        console.error('❌ Database order creation failed:', orderError);
+        throw orderError;
+      }
+
+      console.log('✅ Order created in database:', order.id);
 
       // Create order items
       const orderItems = items.map(item => ({
@@ -82,28 +116,182 @@ const Checkout = () => {
         price: item.price
       }));
 
+      console.log('📦 Creating order items:', orderItems);
+
       const { error: itemsError } = await supabase
         .from('order_items')
         .insert(orderItems);
 
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        console.error('❌ Order items creation failed:', itemsError);
+        throw itemsError;
+      }
 
-      // Clear cart after successful order
-      clearCart();
+      console.log('✅ Order items created successfully');
+
+      // Step 2: Create Razorpay order using Supabase Edge Functions
+      const amountInPaise = Math.round((total * 1.1) * 100); // Convert to paise
       
-      toast({
-        title: "Order placed successfully!",
-        description: `Your order #${order.id.slice(0, 8)} has been confirmed.`
+      // Ensure minimum amount (₹1 = 100 paise)
+      if (amountInPaise < 100) {
+        toast({
+          title: "Invalid Amount",
+          description: "Minimum amount is ₹1",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      const razorpayOrderData = {
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: `order_${order.id}`.substring(0, 40), // Truncate to 40 chars for Razorpay
+      };
+
+      let razorpayOrder;
+      
+      try {
+        // Create order using Supabase Edge Function
+        const { data, error } = await supabase.functions.invoke('create-razorpay-order', {
+          body: razorpayOrderData,
+          headers: {
+            Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+        });
+
+        if (error) {
+          console.error('❌ Supabase Function Error:', error);
+          console.error('❌ Error Details:', JSON.stringify(error, null, 2));
+          throw new Error(error.message || 'Failed to create Razorpay order');
+        }
+
+        razorpayOrder = data;
+        console.log('✅ Razorpay order created:', razorpayOrder);
+        
+      } catch (error) {
+        console.error('❌ Razorpay order creation failed:', error);
+        toast({
+          title: "❌ Payment Error",
+          description: "Failed to initialize payment. Please try again.",
+          variant: "destructive"
+        });
+        setLoading(false);
+        return;
+      }
+
+      // Step 3: Update order with Razorpay order ID
+      await supabase.from('orders')
+        .update({ razorpay_order_id: razorpayOrder.id })
+        .eq('id', order.id);
+
+      // Step 4: Initialize Razorpay payment
+      const rzp = new window.Razorpay({
+        key: 'rzp_live_G8umJgAzBel5Vj',
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        name: 'SuBurp Foods',
+        description: `Order #${order.id}`,
+        order_id: razorpayOrder.id,
+        prefill: {
+          name: `${shippingInfo.firstName} ${shippingInfo.lastName}`,
+          email: shippingInfo.email,
+          contact: shippingInfo.phone,
+        },
+        notes: {
+          order_id: order.id,
+          customer_id: user.id
+        },
+        theme: {
+          color: '#000000'
+        },
+        handler: async function (response: any) {
+          try {
+            console.log('Payment successful:', response);
+            
+            // Step 5: Verify payment with Supabase Edge Function
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-payment', {
+              body: {
+                razorpay_order_id: razorpayOrder.id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                order_id: order.id,
+              },
+              headers: {
+                Authorization: `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+            });
+
+            if (verifyError || !verifyData.verified) {
+              throw new Error(verifyError?.message || 'Payment verification failed');
+            }
+
+            console.log('✅ Payment verified successfully:', verifyData);
+
+            // Payment verified - update order status to confirmed
+            const { error: updateError } = await supabase.from('orders').update({
+              status: 'confirmed',
+              payment_status: 'completed',
+              payment_id: response.razorpay_payment_id
+            }).eq('id', order.id);
+
+            if (updateError) {
+              console.error('❌ Order status update failed:', updateError);
+              throw updateError;
+            }
+
+            console.log('✅ Order status updated to confirmed');
+
+            // Clear cart after successful order
+            clearCart();
+            
+            toast({
+              title: "✅ Order Confirmed!",
+              description: `Your order #${order.id.slice(0, 8)} has been placed successfully.`
+            });
+
+            // Navigate to order tracking page
+            navigate(`/track-order/${order.id}`);
+          } catch (error: any) {
+            console.error('Payment verification error:', error);
+            toast({
+              title: "❌ Payment Verification Failed",
+              description: error.message,
+              variant: "destructive",
+            });
+          } finally {
+            setLoading(false);
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            setLoading(false);
+            console.log('Razorpay modal dismissed');
+          }
+        }
       });
 
-      // Redirect to order tracking
-      navigate(`/track-order/${order.id}`);
+      rzp.on('payment.failed', (response: any) => {
+        console.error('Payment failed:', response);
+        toast({
+          title: "❌ Payment Failed",
+          description: response.error?.description || "Transaction was unsuccessful.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      });
+
+      console.log('Opening Razorpay with order:', razorpayOrder);
+      rzp.open();
+
     } catch (error: any) {
+      console.error("Checkout Error:", error);
       toast({
-        title: "Order failed",
+        title: "Checkout Error",
         description: error.message,
         variant: "destructive"
       });
+      setLoading(false);
     }
   };
 
@@ -233,9 +421,12 @@ const Checkout = () => {
                     <div key={item.id} className="flex justify-between items-center">
                       <div className="flex items-center gap-3">
                         <img
-                          src={item.image}
+                          src={item.image || '/placeholder.svg'}
                           alt={item.name}
                           className="w-12 h-12 object-cover rounded"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder.svg';
+                          }}
                         />
                         <div>
                           <p className="font-medium">{item.name}</p>
@@ -271,10 +462,90 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
-            <EnhancedPayment
-              amount={total * 1.1}
-              onPaymentSuccess={handlePaymentSuccess}
-            />
+            {/* Payment Button */}
+            <Card>
+              <CardContent className="pt-6">
+                
+                <Button 
+                  onClick={handlePayment} 
+                  disabled={loading || !user}
+                  className="w-full bg-gray-900 hover:bg-green-700 mb-2"
+                >
+                  {loading ? 'Processing Payment...' : `Pay ₹${(total * 1.1).toFixed(2)}`}
+                </Button>
+
+                {/* Test Mode Button for Development */}
+                {/* <Button 
+                  onClick={async () => {
+                    if (!user) {
+                      toast({
+                        title: "Authentication required",
+                        description: "Please login to complete your order",
+                        variant: "destructive"
+                      });
+                      return;
+                    }
+
+                    setLoading(true);
+                    
+                    try {
+                      // Test: Direct Razorpay API call (for debugging)
+                      console.log('🧪 Testing direct Razorpay API call...');
+                      
+                      const testOrderData = {
+                        amount: 100, // ₹1
+                        currency: 'INR',
+                        receipt: 'test_order_123',
+                      };
+
+                      const authString = btoa('rzp_live_G8umJgAzBel5Vj:LBdExscUN9pRrwuXaX1hpKKC');
+                      
+                      const response = await fetch('https://api.razorpay.com/v1/orders', {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Basic ${authString}`,
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(testOrderData),
+                      });
+
+                      if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('❌ Direct API Error:', errorText);
+                        throw new Error(`Direct API failed: ${errorText}`);
+                      }
+
+                      const testOrder = await response.json();
+                      console.log('✅ Direct API Success:', testOrder);
+                      
+                      toast({
+                        title: "✅ Direct API Test Success",
+                        description: `Test order created: ${testOrder.id}`,
+                      });
+
+                    } catch (error: any) {
+                      console.error('❌ Direct API Test Error:', error);
+                      toast({
+                        title: "❌ Direct API Test Failed",
+                        description: error.message,
+                        variant: "destructive"
+                      });
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  disabled={loading || !user}
+                  variant="outline"
+                  className="w-full mb-2"
+                >
+                  🧪 Test Direct Razorpay API
+                </Button> */}
+                
+                {!user && (
+                  <p className="text-sm text-red-500 mt-2 text-center">Please sign in to complete your order</p>
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>

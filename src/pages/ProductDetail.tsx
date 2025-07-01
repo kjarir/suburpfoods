@@ -91,9 +91,12 @@ const ProductDetail = () => {
           {/* Product Image */}
           <div className="animate-fade-in">
             <img
-              src={product.image}
+              src={product.image || '/placeholder.svg'}
               alt={product.name}
-              className="w-full aspect-square object-cover rounded-2xl shadow-lg"
+              className="w-full h-full object-cover rounded-lg"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+              }}
             />
           </div>
 

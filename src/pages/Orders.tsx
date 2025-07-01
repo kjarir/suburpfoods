@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Package, Eye, Download } from 'lucide-react';
@@ -131,9 +130,12 @@ const Orders = () => {
                     {order.order_items.slice(0, 4).map((item: any) => (
                       <div key={item.id} className="flex-shrink-0">
                         <img
-                          src={item.products.image}
+                          src={item.products.image || '/placeholder.svg'}
                           alt={item.products.name}
                           className="w-16 h-16 object-cover rounded"
+                          onError={(e) => {
+                            e.currentTarget.src = '/placeholder.svg';
+                          }}
                         />
                       </div>
                     ))}

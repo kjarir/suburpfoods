@@ -9,7 +9,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <h3 className="text-2xl font-bold mb-4">Subburpfood</h3>
+            <h3 className="text-2xl font-bold mb-4">SuBurpFoods</h3>
             <p className="text-gray-300 mb-4 max-w-md">
               Premium quality food products sourced from local farms and artisans. 
               We're committed to bringing you the freshest, most sustainable ingredients 
@@ -52,8 +52,8 @@ const Footer = () => {
           <div>
             <h4 className="text-lg font-semibold mb-4">Customer Service</h4>
             <ul className="space-y-2 text-gray-300">
-              <li>Email: hello@subburpfood.com</li>
-              <li>Phone: (555) 123-4567</li>
+              <li>Email: hello@suburpfoods.com</li>
+              <li>Phone: (+91) 8655669963</li>
               <li>Hours: Mon-Fri 9am-6pm</li>
               <li>Support: 24/7 Online</li>
             </ul>
@@ -61,7 +61,7 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-300">
-          <p>&copy; 2024 Subburpfood. All rights reserved. | Privacy Policy | Terms of Service</p>
+          <p>&copy; 2025 SuBurpFoods. All rights reserved. | Privacy Policy | Terms of Service</p>
         </div>
       </div>
     </footer>

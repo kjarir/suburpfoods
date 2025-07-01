@@ -722,16 +722,14 @@ const Admin = () => {
                       <CardContent className="p-6">
                         <div className="flex justify-between items-start">
                           <div className="flex gap-4">
-                            {product.image && (
-                              <img
-                                src={product.image}
-                                alt={product.name}
-                                className="w-16 h-16 object-cover rounded"
-                                onError={(e) => {
-                                  e.currentTarget.src = '/placeholder.svg';
-                                }}
-                              />
-                            )}
+                            <img
+                              src={product.image || '/placeholder.svg'}
+                              alt={product.name}
+                              className="w-16 h-16 object-cover rounded"
+                              onError={(e) => {
+                                e.currentTarget.src = '/placeholder.svg';
+                              }}
+                            />
                             <div>
                               <h3 className="font-semibold">{product.name}</h3>
                               <p className="text-sm text-gray-600">{product.category}</p>

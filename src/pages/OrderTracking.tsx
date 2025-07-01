@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Package, Truck, CheckCircle, Clock, MapPin } from 'lucide-react';
@@ -216,9 +215,12 @@ const OrderTracking = () => {
                   {order.order_items.map((item: any) => (
                     <div key={item.id} className="flex items-center gap-4">
                       <img
-                        src={item.products.image}
+                        src={item.products.image || '/placeholder.svg'}
                         alt={item.products.name}
                         className="w-16 h-16 object-cover rounded"
+                        onError={(e) => {
+                          e.currentTarget.src = '/placeholder.svg';
+                        }}
                       />
                       <div className="flex-1">
                         <h4 className="font-medium">{item.products.name}</h4>

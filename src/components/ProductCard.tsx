@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingCart } from 'lucide-react';
@@ -31,9 +30,12 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         <CardContent className="p-0">
           <div className="aspect-square overflow-hidden rounded-t-lg">
             <img
-              src={product.image}
+              src={product.image || '/placeholder.svg'}
               alt={product.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+              }}
             />
           </div>
           <div className="p-4">

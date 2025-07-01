@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
@@ -49,9 +48,12 @@ const Cart = () => {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row gap-4">
                     <img
-                      src={item.image}
+                      src={item.image || '/placeholder.svg'}
                       alt={item.name}
-                      className="w-full sm:w-24 h-24 object-cover rounded-lg"
+                      className="w-16 h-16 object-cover rounded"
+                      onError={(e) => {
+                        e.currentTarget.src = '/placeholder.svg';
+                      }}
                     />
                     
                     <div className="flex-1">
