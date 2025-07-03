@@ -18,9 +18,10 @@ serve(async (req) => {
   console.log('🔑 Auth header:', req.headers.get('Authorization'));
 
   try {
+    // Use service role key to bypass RLS for order verification
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     // Verify user authentication

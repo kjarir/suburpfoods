@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { Resend } from "npm:resend@4.0.0";
@@ -20,16 +19,17 @@ serve(async (req) => {
   }
 
   try {
+    // Use service role key to bypass RLS
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
     const { orderId } = await req.json();
 
     console.log('📧 Sending order confirmation emails for order:', orderId);
 
-    // Fetch order details with items and customer info
+    // First, fetch the order with items and products
     const { data: order, error: orderError } = await supabaseClient
       .from('orders')
       .select(`
@@ -37,8 +37,7 @@ serve(async (req) => {
         order_items (
           *,
           products (name, price)
-        ),
-        profiles (first_name, last_name, email)
+        )
       `)
       .eq('id', orderId)
       .single();
@@ -49,6 +48,18 @@ serve(async (req) => {
     }
 
     console.log('📦 Order data fetched:', order.id);
+
+    // Get user info from the order's user_id
+    const { data: userProfile, error: profileError } = await supabaseClient
+      .from('profiles')
+      .select('first_name, last_name, email')
+      .eq('id', order.user_id)
+      .single();
+
+    if (profileError) {
+      console.error('❌ Error fetching user profile:', profileError);
+      // Continue without profile data, use fallback
+    }
 
     // Generate secure token for shipping status update
     const encoder = new TextEncoder();
@@ -67,8 +78,14 @@ serve(async (req) => {
       console.error('❌ Error storing ship token:', tokenError);
     }
 
-    const customerName = `${order.profiles?.first_name || ''} ${order.profiles?.last_name || ''}`.trim() || 'Customer';
-    const customerEmail = order.profiles?.email;
+    // Get customer info from profile or shipping address
+    const customerName = userProfile 
+      ? `${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim() 
+      : (order.shipping_address as any)?.firstName 
+        ? `${(order.shipping_address as any).firstName} ${(order.shipping_address as any).lastName || ''}`.trim()
+        : 'Customer';
+    
+    const customerEmail = userProfile?.email || (order.shipping_address as any)?.email;
 
     const orderItems = order.order_items.map((item: any) => ({
       name: item.products.name,
