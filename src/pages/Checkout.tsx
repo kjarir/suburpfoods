@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -37,6 +36,8 @@ const Checkout = () => {
     zipCode: '',
     country: 'India'
   });
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const [currentOrder, setCurrentOrder] = useState(null);
 
   // Load Razorpay script dynamically
   useEffect(() => {
@@ -322,6 +323,74 @@ const Checkout = () => {
         variant: "destructive"
       });
       setLoading(false);
+    }
+  };
+
+  const handleRazorpaySuccess = async (response: any) => {
+    console.log('Payment successful:', response);
+    
+    try {
+      setProcessingPayment(true);
+      
+      // Call the payment verification function
+      const { data: verificationResult, error } = await supabase.functions.invoke('verify-payment', {
+        body: {
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_signature: response.razorpay_signature,
+          orderId: currentOrder?.id
+        }
+      });
+
+      if (error) {
+        console.error('Payment verification failed:', error);
+        toast({
+          title: "Error",
+          description: "Payment verification failed. Please contact support.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (verificationResult?.success) {
+        console.log('Payment verified successfully');
+        
+        // Send order confirmation emails
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
+            body: { orderId: currentOrder?.id }
+          });
+          
+          if (emailError) {
+            console.error('Failed to send confirmation emails:', emailError);
+          } else {
+            console.log('Order confirmation emails sent successfully');
+          }
+        } catch (emailError) {
+          console.error('Error sending confirmation emails:', emailError);
+        }
+
+        // Clear cart and redirect
+        clearCart();
+        toast({
+          title: "Payment successful!",
+          description: "Your order has been placed successfully. You will receive a confirmation email shortly.",
+        });
+        
+        // Redirect to orders page
+        navigate('/orders');
+      } else {
+        throw new Error('Payment verification failed');
+      }
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to process payment. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
