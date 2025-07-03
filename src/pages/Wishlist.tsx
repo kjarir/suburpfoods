@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
@@ -93,7 +94,7 @@ const Wishlist = () => {
                   {item.category}
                 </p>
                 <p className="text-lg font-bold text-gray-900 mb-4">
-                  ${item.price.toFixed(2)}
+                  ₹{item.price.toFixed(2)}
                 </p>
 
                 <Button

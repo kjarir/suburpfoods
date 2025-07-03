@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect, useState } from 'react';
@@ -255,6 +256,22 @@ const Checkout = () => {
 
             console.log('✅ Order status updated to confirmed');
 
+            // Send order confirmation emails
+            try {
+              const { error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
+                body: { orderId: order.id },
+              });
+
+              if (emailError) {
+                console.error('❌ Email sending failed:', emailError);
+                // Don't throw error, just log it as email is not critical for order completion
+              } else {
+                console.log('✅ Order confirmation emails sent');
+              }
+            } catch (emailError) {
+              console.error('❌ Email sending error:', emailError);
+            }
+
             // Clear cart after successful order
             clearCart();
             
@@ -486,73 +503,6 @@ const Checkout = () => {
                 >
                   {loading ? 'Processing Payment...' : `Pay ₹${(total * 1.1).toFixed(2)}`}
                 </Button>
-
-                {/* Test Mode Button for Development */}
-                {/* <Button 
-                  onClick={async () => {
-                    if (!user) {
-                      toast({
-                        title: "Authentication required",
-                        description: "Please login to complete your order",
-                        variant: "destructive"
-                      });
-                      return;
-                    }
-
-                    setLoading(true);
-                    
-                    try {
-                      // Test: Direct Razorpay API call (for debugging)
-                      console.log('🧪 Testing direct Razorpay API call...');
-                      
-                      const testOrderData = {
-                        amount: 100, // ₹1
-                        currency: 'INR',
-                        receipt: 'test_order_123',
-                      };
-
-                      const authString = btoa('rzp_live_G8umJgAzBel5Vj:LBdExscUN9pRrwuXaX1hpKKC');
-                      
-                      const response = await fetch('https://api.razorpay.com/v1/orders', {
-                        method: 'POST',
-                        headers: {
-                          'Authorization': `Basic ${authString}`,
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(testOrderData),
-                      });
-
-                      if (!response.ok) {
-                        const errorText = await response.text();
-                        console.error('❌ Direct API Error:', errorText);
-                        throw new Error(`Direct API failed: ${errorText}`);
-                      }
-
-                      const testOrder = await response.json();
-                      console.log('✅ Direct API Success:', testOrder);
-                      
-                      toast({
-                        title: "✅ Direct API Test Success",
-                        description: `Test order created: ${testOrder.id}`,
-                      });
-
-                    } catch (error: any) {
-                      console.error('❌ Direct API Test Error:', error);
-                      toast({
-                        title: "❌ Direct API Test Failed",
-                        description: error.message,
-                        variant: "destructive"
-                      });
-                    } finally {
-                      setLoading(false);
-                    }
-                  }}
-                  disabled={loading || !user}
-                  variant="outline"
-                  className="w-full mb-2"
-                >
-                  🧪 Test Direct Razorpay API
-                </Button> */}
                 
                 {!user && (
                   <p className="text-sm text-red-500 mt-2 text-center">Please sign in to complete your order</p>
